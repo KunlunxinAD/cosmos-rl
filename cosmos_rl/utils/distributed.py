@@ -37,7 +37,6 @@ from torch.distributed.tensor.parallel import ParallelStyle
 from cosmos_rl.utils.logging import logger
 from cosmos_rl.utils import constant, network_util
 from cosmos_rl.dispatcher.command import Command, BuildMeshCommand
-from cosmos_rl.dispatcher.api.client import APIClient
 from cosmos_rl.utils.pynccl import (
     get_nccl_timeout_ms,
     nccl_timeout_watchdog,
@@ -366,7 +365,11 @@ def all_gather_object_cpu(obj, device=torch.device("cpu"), group=None):
     if world_size == 1:
         return [obj]
 
-    obj_lst = [None for i in range(world_size)]
+    obj_lst = (
+        [None for i in range(world_size)]
+        if group is None
+        else [None for i in range(group.size())]
+    )
     dist.all_gather_object(obj_lst, obj, group=group)
     return obj_lst
 
@@ -374,7 +377,7 @@ def all_gather_object_cpu(obj, device=torch.device("cpu"), group=None):
 class HighAvailabilitylNccl:
     DESTROY_CMD = "destroy"
 
-    def __init__(self, replica_name: str, global_rank: int, api_client: APIClient):
+    def __init__(self, replica_name: str, global_rank: int, api_client):
         self.replica_name = replica_name
         self.global_rank = global_rank
         self.api_client = api_client
